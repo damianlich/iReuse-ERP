@@ -1,0 +1,30 @@
+/* public/assets/css/employees.css */
+
+/* Estilo para los encabezados de sección dentro del formulario */
+.form-section-header {
+    font-size: 1.2rem;
+    font-weight: 500;
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #dee2e6;
+    color: #0d6efd; /* Color primario de Bootstrap */
+}
+
+/* Añade un asterisco rojo a las etiquetas de los campos requeridos */
+.form-label.required::after {
+    content: " *";
+    color: #dc3545; /* Color de peligro de Bootstrap */
+    font-weight: bold;
+}
+
+/* Estilo para los mensajes de error de validación de JavaScript */
+.error-message {
+    width: 100%;
+    margin-top: 0.25rem;
+    font-size: .875em; /* Tamaño de fuente estándar para mensajes de formulario */
+    color: #dc3545;
+}
+
+/* Bootstrap ya tiene una clase .is-invalid que pone el borde rojo,
+   así que nos enfocamos en el mensaje de texto. */

@@ -1,17 +1,33 @@
+# .htaccess en la raíz del proyecto (ej. /sistema-gestion-personal/.htaccess)
+
+# ==============================================================================
+# CONFIGURACIÓN Y SEGURIDAD
+# ==============================================================================
+Options -FollowSymLinks -Indexes
+DirectoryIndex public/index.php
+
+# ==============================================================================
+# REGLAS DE REESCRITURA
+# ==============================================================================
 RewriteEngine On
 
-# Redirigir todo a public/index.php
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(.*)$ public/index.php?url=$1 [QSA,L]
+# Redirige todas las solicitudes que NO sean para la carpeta /public
+# directamente a la carpeta /public.
+# Esto asegura que todos los recursos (CSS, JS, etc.) se sirvan desde allí.
+RewriteCond %{REQUEST_URI} !^/public/
+RewriteRule ^(.*)$ public/$1 [L]
 
-# Proteger archivos sensibles
+# ==============================================================================
+# BLOQUEO DE ACCESO A ARCHIVOS Y CARPETAS SENSIBLES
+# ==============================================================================
+
+# Bloquear acceso a archivos que comienzan con un punto
 <Files ~ "^\.">
-    Order allow,deny
-    Deny from all
+    Require all denied
 </Files>
 
-<Files "config">
-    Order allow,deny
-    Deny from all
-</Files>
+# Bloquear acceso a carpetas fuera del directorio público.
+# Esta es una capa de seguridad adicional por si el DocumentRoot no está configurado correctamente.
+RedirectMatch 403 ^/app/.*$
+RedirectMatch 403 ^/config/.*$
+RedirectMatch 403 ^/vendor/.*$
