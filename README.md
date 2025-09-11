@@ -13,7 +13,8 @@ ERP modular para gestión integral de personal desarrollado por iReuse SAS.
 ## Tecnologías utilizadas
 
 - HTML5, CSS3, JavaScript
+- TypeScript - Toca adaptar el proyecto para usar el SDK web del lector 
 - PHP 7.4+
 - MySQL/MariaDB
-- SDK de lector de huellas
+- SDK de lector de huellas DIgitalPersona HID
 - Bootstrap/Bulma para UI
