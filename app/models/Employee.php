@@ -64,6 +64,63 @@ class Employee {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+// ... (Después del método search() y antes de create())
+
+    /**
+     * NUEVO: Busca un empleado comparando la huella digital recibida con las almacenadas.
+     * @param string $receivedFingerprintData Los datos de la huella capturada (probablemente en Base64).
+     * @return array|false Un array asociativo con los datos del empleado si se encuentra, o false si no hay coincidencia.
+     */
+    public function findEmployeeByFingerprint($receivedFingerprintData) {
+        // 1. Obtenemos las plantillas de huellas de todos los empleados que tengan una registrada.
+        // Esto es más eficiente que traer a todos los empleados.
+        $query = "SELECT id, full_name, fingerprint_template FROM " . $this->table_name . " WHERE fingerprint_template IS NOT NULL AND fingerprint_template != ''";
+        
+        try {
+            $stmt = $this->conn->prepare($query);
+            $stmt->execute();
+            $employeesWithTemplates = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            // Manejar error de base de datos
+            error_log("Error al obtener plantillas de huellas: " . $e->getMessage());
+            return false;
+        }
+
+        // 2. Iteramos sobre los resultados y comparamos cada plantilla.
+        // Esta es la parte que requiere una LIBRERÍA DE TERCEROS.
+        
+        // --- INICIO DE PSEUDOCÓDIGO (REQUIERE LIBRERÍA EXTERNA) ---
+
+        // Suponiendo que has incluido una librería de comparación, el código se vería así:
+        // require_once 'path/to/fingerprint_matching_library.php';
+        // $matcher = new FingerprintMatcher();
+        // $matcher->setConfidenceThreshold(90); // Establecer un umbral de confianza
+
+        foreach ($employeesWithTemplates as $employee) {
+            $storedTemplate = $employee['fingerprint_template'];
+            
+            // La función match() de la librería compararía las dos plantillas
+            // y devolvería true si coinciden con suficiente confianza.
+            // if ($matcher->match($receivedFingerprintData, $storedTemplate)) {
+            //     // ¡Coincidencia encontrada! Devolvemos los datos del empleado.
+            //     // Solo necesitamos el ID y el nombre para el mensaje de bienvenida.
+            //     return [
+            //         'id' => $employee['id'],
+            //         'full_name' => $employee['full_name']
+            //     ];
+            // }
+        }
+        // --- FIN DE PSEUDOCÓDIGO ---
+
+        // Si el bucle termina sin encontrar coincidencias, devolvemos false.
+        return false;
+    }
+
+    /**
+     * MEJORA: Crea un nuevo empleado a partir de un array de datos.
+     * ... (el resto de tu código sigue igual)
+     */
+
     /**
      * MEJORA: Crea un nuevo empleado a partir de un array de datos.
      * @param array $data Un array asociativo con los datos del empleado.
