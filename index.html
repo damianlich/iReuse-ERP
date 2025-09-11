@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Asistencia Biométrico</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="container">
+        <div class="card">
+            <header>
+                <h1>Registro de Asistencia</h1>
+                <p id="current-time" class="time"></p>
+            </header>
+            
+            <main>
+                <div id="status-container">
+                    <p id="status-message">Conectando con el lector de huellas...</p>
+                </div>
+
+                <div class="image-container">
+                    <div class="image-wrapper">
+                        <img id="employee-photo" src="assets/img/default-user.png" alt="Foto del Empleado">
+                    </div>
+                    <div class="image-wrapper">
+                        <img id="huella" src="assets/img/fingerprint-scan.gif" alt="Huella Digital">
+                    </div>
+                </div>
+
+                <div class="info-container">
+                    <h2 id="employee-name">-- Nombre del Empleado --</h2>
+                    <p id="registration-details">Esperando registro...</p>
+                </div>
+            </main>
+            
+            <footer>
+                <button id="start" class="btn">Iniciar Captura</button>
+                <button id="stop" class="btn btn-secondary">Detener Captura</button>
+            </footer>
+        </div>
+    </div>
+
+    <script src="scripts/websdk.client.ui.js"></script>
+    <script src="scripts/fingerprint.sdk.js"></script>
+    
+    <script src="index.js"></script>
+
+</body>
+</html>

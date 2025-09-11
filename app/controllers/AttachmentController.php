@@ -1,87 +1,85 @@
 <?php
+// Requerir los modelos que vamos a utilizar
+require_once __DIR__ . '/../models/Employee.php';
+require_once __DIR__ . '/../models/AttendanceModel.php';
 
-require_once '../../app/models/Attachment.php';
-require_once '../../app/middleware/AuthMiddleware.php';
+class AttendanceController {
 
-class AttachmentController {
-    
-    public function upload() {
-        // 1. Autenticación y Control de Permisos
-        $authMiddleware = new AuthMiddleware();
-        $currentUser = $authMiddleware->getCurrentUser();
-        
-        $allowed_roles = ['super_admin', 'manager'];
-        if (!in_array($currentUser['role'], $allowed_roles)) {
-            // Si el rol no está permitido, redirigir con un mensaje de error.
-            header('Location: index.php?action=employees_index&error=permission_denied');
-            exit();
+    /**
+     * Maneja la solicitud completa de registro de asistencia por huella.
+     */
+    public function handleRegistrationRequest() {
+        try {
+            // 1. Obtener los datos JSON de la petición
+            $data = json_decode(file_get_contents("php://input"));
+
+            // 2. Validar que la huella fue enviada
+            if (empty($data->fingerprint)) {
+                http_response_code(400); // Bad Request
+                echo json_encode(["success" => false, "message" => "No se recibieron datos de la huella."]);
+                return;
+            }
+
+            // 3. Identificar al empleado usando el modelo Employee
+            $employeeModel = new Employee();
+            $employee = $employeeModel->findEmployeeByFingerprint($data->fingerprint);
+
+            // 4. Si no se encuentra el empleado, devolver error 404
+            if (!$employee) {
+                http_response_code(404); // Not Found
+                echo json_encode(["success" => false, "message" => "Empleado no reconocido."]);
+                return;
+            }
+
+            // 5. Si se encuentra, registrar la asistencia usando AttendanceModel
+            $attendanceModel = new AttendanceModel();
+            $registrationResult = $attendanceModel->createOrUpdateRecord($employee['id']);
+
+            if (!$registrationResult) {
+                 http_response_code(500); // Internal Server Error
+                 echo json_encode(["success" => false, "message" => "No se pudo guardar el registro de asistencia."]);
+                 return;
+            }
+
+            // 6. Construir la respuesta JSON exitosa que espera el frontend
+            $this->sendSuccessResponse($employee, $registrationResult);
+
+        } catch (Exception $e) {
+            // Manejo de errores inesperados
+            http_response_code(500); // Internal Server Error
+            echo json_encode([
+                "success" => false,
+                "message" => "Ocurrió un error interno en el servidor: " . $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Construye y envía la respuesta JSON en caso de éxito.
+     * @param array $employee - Datos del empleado (id, full_name, etc.)
+     * @param array $registrationResult - Resultado del modelo de asistencia (action, id)
+     */
+    private function sendSuccessResponse($employee, $registrationResult) {
+        // NOTA: Tu tabla 'employees' no tiene un campo para la foto.
+        // Aquí simulamos una URL. Deberías agregar un campo 'photo_url' a tu tabla.
+        $photo_url = "assets/uploads/photos/" . $employee['id'] . ".jpg";
+        if (!file_exists($_SERVER['DOCUMENT_ROOT'] . '/' . $photo_url)) {
+            $photo_url = "assets/img/default-user.png"; // Imagen por defecto si no existe
         }
 
-        // 2. Validación de Datos de Entrada (POST y FILES)
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST' || empty($_FILES['document'])) {
-            header('Location: ' . $_SERVER['HTTP_REFERER'] . '&error=invalid_request');
-            exit();
-        }
 
-        $employee_id = filter_input(INPUT_POST, 'employee_id', FILTER_VALIDATE_INT);
-        $attachment_type = filter_input(INPUT_POST, 'attachment_type', FILTER_SANITIZE_STRING);
-        $file = $_FILES['document'];
-
-        // Verificar que el archivo no tenga errores de subida
-        if ($file['error'] !== UPLOAD_ERR_OK) {
-            header('Location: ' . $_SERVER['HTTP_REFERER'] . '&error=upload_failed');
-            exit();
-        }
-
-        // 3. Validación de Seguridad del Archivo
-        $max_file_size = 5 * 1024 * 1024; // 5 MB
-        if ($file['size'] > $max_file_size) {
-            header('Location: ' . $_SERVER['HTTP_REFERER'] . '&error=file_too_large');
-            exit();
-        }
-
-        $allowed_mime_types = [
-            'application/pdf' => '.pdf',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => '.docx',
-            'application/msword' => '.doc',
-            'image/jpeg' => '.jpg',
-            'image/png' => '.png'
+        $response = [
+            "success" => true,
+            "message" => "Registro exitoso para " . $employee['full_name'],
+            "employee" => [
+                "id" => (int)$employee['id'],
+                "name" => $employee['full_name'],
+                "photo_url" => $photo_url 
+            ],
+            "details" => $registrationResult
         ];
         
-        $file_mime_type = mime_content_type($file['tmp_name']);
-        if (!array_key_exists($file_mime_type, $allowed_mime_types)) {
-            header('Location: ' . $_SERVER['HTTP_REFERER'] . '&error=invalid_file_type');
-            exit();
-        }
-
-        // 4. Lógica de Almacenamiento Seguro
-        $upload_dir = '../../public/assets/uploads/documents/';
-        if (!is_dir($upload_dir)) {
-            mkdir($upload_dir, 0755, true);
-        }
-
-        $original_filename = basename($file['name']);
-        $extension = $allowed_mime_types[$file_mime_type];
-        // Generar un nombre único para evitar colisiones y ofuscar el nombre original
-        $new_filename = uniqid('doc_' . $employee_id . '_', true) . $extension;
-        $destination_path = $upload_dir . $new_filename;
-        $public_path = 'assets/uploads/documents/' . $new_filename; // Ruta relativa para la BD
-
-        if (move_uploaded_file($file['tmp_name'], $destination_path)) {
-            // 5. Guardar en la Base de Datos
-            $attachmentModel = new Attachment();
-            if ($attachmentModel->create($employee_id, $original_filename, $public_path, $attachment_type)) {
-                // Éxito: redirigir a la ficha del empleado
-                header('Location: index.php?action=employees_show&id=' . $employee_id . '&success=upload_complete');
-            } else {
-                // Error de base de datos, opcionalmente eliminar el archivo subido
-                unlink($destination_path);
-                header('Location: index.php?action=employees_show&id=' . $employee_id . '&error=db_error');
-            }
-        } else {
-            // Error al mover el archivo
-            header('Location: index.php?action=employees_show&id=' . $employee_id . '&error=move_failed');
-        }
-        exit();
+        http_response_code(200); // OK
+        echo json_encode($response);
     }
 }
